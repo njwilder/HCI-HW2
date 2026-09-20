@@ -43,7 +43,7 @@ def update_predictor():
     dist = distance_slider.value
     w = width_slider.value
     mt = calculate_fitts(dist, w, calibrated_a, calibrated_b)
-    
+
     prefix = "Calibrated" if is_calibrated else "Predicted"
     result_label.set_text(f"{prefix} Movement Time: {mt:.3f} seconds")
 
@@ -52,9 +52,9 @@ def start_trial():
     trial_state['width'] = width_slider.value
 
     trial_state['current_step'] = 1
-    
+
     left_position = 120 + trial_state['distance']
-    
+
     target_btn.style(f'position: absolute; left: {left_position}px; width: {trial_state["width"]}px; display: block;')
     start_btn.props('disabled')
     trial_state['start_time'] = time.time()
@@ -63,27 +63,27 @@ def complete_trial():
     global calibrated_a, calibrated_b, is_calibrated
     if trial_state['current_step'] != 1:
         return
-        
+
     elapsed_time = time.time() - trial_state['start_time']
     actual_dist = trial_state['distance']
     actual_width = trial_state['width']
-    
+
     # Calculate Index of Difficulty (ID) in bits
     idx_difficulty = calculate_index_difficulty(actual_dist, actual_width)
-    
+
     # Save parameters for linear regression to calibrate once 10 trials are complete
     collected_bits.append(idx_difficulty)
     collected_times.append(elapsed_time)
     # Save (dist, time) coordinates to use in the chart 
     raw_scatter_points.append([actual_dist, elapsed_time])
-    
+
     runs_count = len(collected_times)
-    
+
     # Run the linear regression loop once we hit 10 samples
     if runs_count >= 10:
         # np.polyfit(X, Y, 1) returns [slope, intercept] -> [b, a]
         b_slope, a_intercept = np.polyfit(collected_bits, collected_times, 1)
-        
+
         # Prevent math anomalies from bad single clicks (e.g. negative values)
         calibrated_a = max(0.01, a_intercept)
         calibrated_b = max(0.01, b_slope)
@@ -96,7 +96,8 @@ def complete_trial():
             f"CALIBRATION COMPLETE!\n"
             f"Your Intercept (a): {calibrated_a:.3f}s | "
             f"Your Slope (b): {calibrated_b:.3f}s/bit | "
-            f"Throughput: {throughput:.2f} bits/s"
+            f"Throughput: {throughput:.2f} bits/s\n"
+            f"Trials run: {runs_count}"
         )
         stats_label.style('color: #2e7d32; background-color: #e8f5e9; padding: 10px; border-radius: 4px;')
     else:
@@ -105,11 +106,11 @@ def complete_trial():
     test_result_label.set_text(
         f"Most recent run: {elapsed_time:.3f}s | Model prediction: {calculate_fitts(actual_dist, actual_width, calibrated_a, calibrated_b):.3f}s"
     )
-    
+
     # Refresh chart graphic with latest (distance, time) coordinates including current trial
     chart.options['series'][0]['data'] = raw_scatter_points
     chart.update()
-    
+
     # Reset UI layout
     target_btn.style('display: none;')
     start_btn.props(remove='disabled')
@@ -129,10 +130,10 @@ def reset_dataset():
     collected_bits.clear()
     collected_times.clear()
     raw_scatter_points.clear()
-     
+
     chart.options['series'][0]['data'] = []
     chart.update()
-    
+
     stats_label.set_content("Dataset wiped. Awaiting 10 new taps to recalibrate.")
     stats_label.style('color: #424242; background-color: transparent; padding: 0px;')
     test_result_label.set_text('Waiting for your first run...')
